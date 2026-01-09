@@ -3,18 +3,17 @@ import React, { useMemo, useState } from 'react';
 import { Tool, Withdrawal, ToolModel } from '../types';
 import { REASONS } from '../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Zap, Box, TrendingUp, Sparkles, AlertTriangle, Layers, ShieldCheck, Hexagon, FileWarning, Filter, XCircle, ArrowRight, BarChart3 } from 'lucide-react';
+import { Zap, Box, TrendingUp, AlertTriangle, Layers, ShieldCheck, Hexagon, FileWarning, Filter, XCircle, ArrowRight, BarChart3, Inbox } from 'lucide-react';
 
 interface Props {
   inventory: Tool[];
   withdrawals: Withdrawal[];
-  aiInsights: string;
   onNavigateToInventory: (filter: string) => void;
 }
 
 type TimeRange = 'diario' | 'semanal' | 'mensal';
 
-const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavigateToInventory }) => {
+const Dashboard: React.FC<Props> = ({ inventory, withdrawals, onNavigateToInventory }) => {
   const [totalTimeRange, setTotalTimeRange] = useState<TimeRange>('diario');
   
   // Date Filters
@@ -36,27 +35,29 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
     if (!startDate && !endDate) return withdrawals;
 
     const start = startDate ? new Date(startDate) : null;
+    if (start) start.setHours(0, 0, 0, 0);
+    
     const end = endDate ? new Date(endDate) : null;
-    if (end) {
-      const endOfDay = new Date(end);
-      endOfDay.setHours(23, 59, 59, 999);
-      return withdrawals.filter(w => {
-        const d = new Date(w.date);
-        if (start && d < start) return false;
-        if (d > endOfDay) return false;
-        return true;
-      });
-    }
-
+    if (end) end.setHours(23, 59, 59, 999);
+    
     return withdrawals.filter(w => {
       const d = new Date(w.date);
       if (start && d < start) return false;
+      if (end && d > end) return false;
       return true;
     });
   }, [withdrawals, startDate, endDate]);
 
+  const mostStockedModel = useMemo(() => {
+    const models: Record<ToolModel, number> = { T45: 0, T50: 0, T51: 0 };
+    inventory.forEach(t => {
+      models[t.model] += t.quantity;
+    });
+    return (Object.entries(models).reduce((a, b) => (a[1] >= b[1] ? a : b))[0]) as ToolModel;
+  }, [inventory]);
+
   const hasteStock = useMemo(() => {
-    return ['T51', 'T50', 'T45'].map(model => {
+    return (['T51', 'T50', 'T45'] as ToolModel[]).map(model => {
       const tool = inventory.find(t => t.type === 'Haste' && t.model === model);
       return {
         model,
@@ -67,7 +68,7 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
   }, [inventory]);
 
   const punhoStock = useMemo(() => {
-    return ['T51', 'T50', 'T45'].map(model => {
+    return (['T51', 'T50', 'T45'] as ToolModel[]).map(model => {
       const tool = inventory.find(t => t.type === 'Punho' && t.model === model);
       return {
         model,
@@ -79,15 +80,15 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
 
   const bitStock = useMemo(() => {
     const bitSpecs = [
-      { type: "Bit 4,5''", model: 'T51' },
-      { type: "Bit 3,5''", model: 'T51' },
-      { type: "Bit 4,5''", model: 'T50' },
-      { type: "Bit 4,5''", model: 'T45' },
-      { type: "Bit 3,5''", model: 'T45' },
+      { type: "Bit 4,5''", model: 'T51' as ToolModel },
+      { type: "Bit 3,5''", model: 'T51' as ToolModel },
+      { type: "Bit 4,5''", model: 'T50' as ToolModel },
+      { type: "Bit 4,5''", model: 'T45' as ToolModel },
+      { type: "Bit 3,5''", model: 'T45' as ToolModel },
     ];
 
     return bitSpecs.map(spec => {
-      const tool = inventory.find(t => t.type === spec.type && t.model === spec.model as ToolModel);
+      const tool = inventory.find(t => t.type === spec.type && t.model === spec.model);
       return {
         name: `${spec.type} - ${spec.model}`,
         model: spec.model,
@@ -141,11 +142,17 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Iterar usando cópias para evitar efeitos colaterais
+    let current = new Date(earliestWithdrawalDate);
+
     if (range === 'diario') {
-      let current = new Date(earliestWithdrawalDate);
       while (current <= today) {
-        const dateStr = current.toISOString().split('T')[0];
-        const dayWithdrawals = withdrawals.filter(w => w.date.startsWith(dateStr));
+        const dayWithdrawals = withdrawals.filter(w => {
+          const wd = new Date(w.date);
+          return wd.getDate() === current.getDate() && 
+                 wd.getMonth() === current.getMonth() && 
+                 wd.getFullYear() === current.getFullYear();
+        });
         
         data.push({ 
           label: current.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
@@ -154,7 +161,7 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
         current.setDate(current.getDate() + 1);
       }
     } else if (range === 'semanal') {
-      let current = getStartOfWeek(earliestWithdrawalDate);
+      current = getStartOfWeek(earliestWithdrawalDate);
       while (current <= today) {
         const weekEnd = new Date(current);
         weekEnd.setDate(current.getDate() + 6);
@@ -172,7 +179,7 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
         current.setDate(current.getDate() + 7);
       }
     } else {
-      let current = new Date(earliestWithdrawalDate.getFullYear(), earliestWithdrawalDate.getMonth(), 1);
+      current = new Date(earliestWithdrawalDate.getFullYear(), earliestWithdrawalDate.getMonth(), 1);
       const endLimit = new Date(today.getFullYear(), today.getMonth(), 1);
       
       while (current <= endLimit) {
@@ -210,6 +217,13 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
     setStartDate('');
     setEndDate('');
   };
+
+  const renderEmptyState = (message: string) => (
+    <div className="flex flex-col items-center justify-center h-full py-10 opacity-40">
+      <Inbox size={48} className="mb-2" />
+      <p className="text-sm font-medium">{message}</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -268,8 +282,8 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
             <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><TrendingUp size={24} /></div>
             <span className="text-xs font-semibold text-slate-400 uppercase">Modelo Principal</span>
           </div>
-          <p className="text-3xl font-bold text-slate-800">T51</p>
-          <p className="text-sm text-slate-500 mt-1">Modelo mais estocado</p>
+          <p className="text-3xl font-bold text-slate-800">{mostStockedModel}</p>
+          <p className="text-sm text-slate-500 mt-1">Modelo mais estocado atualmente</p>
         </div>
       </div>
 
@@ -416,19 +430,21 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
         </div>
 
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={totalEvolutionData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-              <Tooltip 
-                cursor={{fill: '#f8fafc'}}
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                formatter={(value: number) => [`${value} unidades`, 'Total de Saídas']}
-              />
-              <Bar dataKey="totalOutput" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={50} />
-            </BarChart>
-          </ResponsiveContainer>
+          {totalEvolutionData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={totalEvolutionData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                <Tooltip 
+                  cursor={{fill: '#f8fafc'}}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: number) => [`${value} unidades`, 'Total de Saídas']}
+                />
+                <Bar dataKey="totalOutput" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={50} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : renderEmptyState("Sem dados de movimentação no período.")}
         </div>
       </div>
 
@@ -475,22 +491,24 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
             </div>
           </div>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={detailedTypeConsumptionData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, angle: -15, textAnchor: 'end'}} height={60} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                  {detailedTypeConsumptionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={modelColors[entry.model as ToolModel] || '#cbd5e1'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {detailedTypeConsumptionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={detailedTypeConsumptionData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10}} height={60} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                    {detailedTypeConsumptionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={modelColors[entry.model as ToolModel] || '#cbd5e1'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : renderEmptyState("Nenhum consumo registrado para os filtros atuais.")}
           </div>
         </div>
 
@@ -506,47 +524,24 @@ const Dashboard: React.FC<Props> = ({ inventory, withdrawals, aiInsights, onNavi
             </div>
           </div>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reasonConsumptionData} layout="vertical" margin={{ left: 40, right: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                <XAxis type="number" axisLine={false} tickLine={false} hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={140} tick={{ fontSize: 11, fontWeight: 600, fill: '#64748b' }} />
-                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="total" radius={[0, 4, 4, 0]} barSize={24} label={{ position: 'right', fontSize: 12, fontWeight: 800, fill: '#1e293b' }}>
-                  {reasonConsumptionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={reasonColors[index % reasonColors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {reasonConsumptionData.some(d => d.total > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={reasonConsumptionData} layout="vertical" margin={{ left: 40, right: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" axisLine={false} tickLine={false} hide />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={140} tick={{ fontSize: 11, fontWeight: 600, fill: '#64748b' }} />
+                  <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Bar dataKey="total" radius={[0, 4, 4, 0]} barSize={24} label={{ position: 'right', fontSize: 12, fontWeight: 800, fill: '#1e293b' }}>
+                    {reasonConsumptionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={reasonColors[index % reasonColors.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : renderEmptyState("Aguardando registros de saída.")}
           </div>
         </div>
       </div>
-
-      <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <Sparkles size={120} />
-        </div>
-        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Sparkles size={20} className="text-blue-400" />
-          Análise Preditiva e Insights
-        </h3>
-        <div className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed max-h-[220px] overflow-y-auto custom-scrollbar">
-          {aiInsights.split('\n').map((line, i) => (
-            <p key={i} className="mb-2">{line}</p>
-          ))}
-        </div>
-        <div className="mt-4 pt-4 border-t border-slate-800 flex items-center gap-2 text-xs text-slate-400">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          Processado por Gemini Flash
-        </div>
-      </div>
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
-      `}</style>
     </div>
   );
 };

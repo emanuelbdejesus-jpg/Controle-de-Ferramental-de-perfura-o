@@ -1,11 +1,19 @@
 
 import React, { useState, useMemo } from 'react';
 import { Withdrawal } from '../types';
-import { Calendar, User, Info, FileText, Tag as TagIcon, Filter, Search, HardHat, Users, Download, ChevronRight } from 'lucide-center';
-import { Drill } from 'lucide-react'; // Fix missing import for icons if any, though lucide-react is the main source
-
-// Note: Re-importing lucide-react icons as they were referenced correctly in the original file but the user prompt content had 'lucide-center' which was likely a typo in my thought process or input, correcting to lucide-react.
-import { Calendar as Cal, User as Usr, Info as Inf, FileText as FileT, Tag as TagI, Filter as Filt, Search as Sea, HardHat as HardH, Users as Usrs, Download as Down, ChevronRight as ChevR } from 'lucide-react';
+import { 
+  Calendar, 
+  User, 
+  Info, 
+  FileText, 
+  Tag, 
+  Filter, 
+  Search, 
+  HardHat, 
+  Users, 
+  Download, 
+  ChevronRight 
+} from 'lucide-react';
 
 interface Props {
   withdrawals: Withdrawal[];
@@ -104,7 +112,7 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-slate-800 font-bold">
-            <Filt size={20} className="text-blue-600" />
+            <Filter size={20} className="text-blue-600" />
             <span>Filtrar Histórico por Período</span>
           </div>
 
@@ -135,7 +143,7 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
           <div className={`${filterRange === 'custom' ? 'md:col-span-4' : 'md:col-span-8'} space-y-1`}>
             <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1">Pesquisa Geral</label>
             <div className="relative">
-              <Sea className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
                 type="text"
                 placeholder="Ferramenta, Supervisor, Operador, TAG..."
@@ -151,7 +159,7 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
               <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1">Intervalo Customizado</label>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Cal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input
                     type="date"
                     className="w-full pl-9 pr-2 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
@@ -159,9 +167,9 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </div>
-                <ChevR size={16} className="text-slate-300" />
+                <ChevronRight size={16} className="text-slate-300" />
                 <div className="relative flex-1">
-                  <Cal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   <input
                     type="date"
                     className="w-full pl-9 pr-2 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
@@ -179,7 +187,7 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
               disabled={filteredWithdrawals.length === 0}
               className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-emerald-100"
             >
-              <Down size={18} />
+              <Download size={18} />
               Exportar CSV
             </button>
           </div>
@@ -188,7 +196,7 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
 
       {filteredWithdrawals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
-          <FileT size={48} className="text-slate-300 mb-4" />
+          <FileText size={48} className="text-slate-300 mb-4" />
           <p className="text-slate-500 font-medium">Nenhum registro encontrado.</p>
         </div>
       ) : (
@@ -199,23 +207,23 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <span className="text-lg font-bold text-slate-800">{item.toolName}</span>
                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded uppercase flex items-center gap-1 border border-blue-100">
-                    <TagI size={10} /> {item.rigTag}
+                    <Tag size={10} /> {item.rigTag}
                   </span>
                   <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded uppercase flex items-center gap-1 border border-indigo-100">
-                    <Usrs size={10} /> {item.team}
+                    <Users size={10} /> {item.team}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 text-sm text-slate-500">
                   <div className="flex items-center gap-1.5">
-                    <Cal size={14} className="text-slate-400" />
+                    <Calendar size={14} className="text-slate-400" />
                     {new Date(item.date).toLocaleString('pt-BR')}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Usr size={14} className="text-slate-400" />
+                    <User size={14} className="text-slate-400" />
                     <span className="font-semibold text-slate-700">Sup:</span> {item.supervisor}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <HardH size={14} className="text-slate-400" />
+                    <HardHat size={14} className="text-slate-400" />
                     <span className="font-semibold text-slate-700">Op:</span> {item.operator}
                   </div>
                 </div>
@@ -223,7 +231,7 @@ const HistoryList: React.FC<Props> = ({ withdrawals }) => {
               
               <div className="md:w-64 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-4">
                 <div className="flex items-start gap-1.5 text-sm">
-                  <Inf size={12} className="text-blue-500 mt-1" />
+                  <Info size={12} className="text-blue-500 mt-1" />
                   <div>
                     <span className="block font-bold text-slate-400 uppercase text-[9px] mb-0.5">Motivo</span>
                     <span className="text-slate-600 text-sm leading-tight">{item.reason}</span>
